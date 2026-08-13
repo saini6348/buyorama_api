@@ -1,4 +1,4 @@
-import type { IncomingMessage, ServerResponse } from 'http';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createApp } from '../src/app.bootstrap';
 
 // Cache the Nest application across warm invocations.
@@ -11,8 +11,8 @@ async function getApp() {
   return cachedApp;
 }
 
-// Vercel Node.js serverless handler — routes every request through Nest.
-export default async function handler(req: IncomingMessage, res: ServerResponse) {
+// Vercel Node.js serverless function — routes every request through Nest.
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const app = await getApp();
     app.getHttpAdapter().getInstance()(req, res);
@@ -22,7 +22,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     if (!res.headersSent) {
       res.statusCode = 500;
       res.setHeader('Content-Type', 'application/json');
-      res.end(JSON.stringify({ message: 'Internal server error' }));
+      res.json({ message: 'Internal server error' });
     }
   }
 }
