@@ -45,24 +45,58 @@ import { Tag } from './entities/tag.entity';
         limit: 30, // 30 requests per minute
       },
     ]),
-    TypeOrmModule.forRoot({
-      type: 'sqlite',
-      database: 'healthelink_buyorama_dev.sqlite',
-      entities: [
-        Brand,
-        User,
-        SiteSettings,
-        Content,
-        BrandCoupon,
-        AllCoupon,
-        BrandFeed,
-        CardsFeed,
-        CreditCardCategory,
-        Bank,
-        Tag,
-      ],
-      synchronize: true,
-      logging: false,
+    TypeOrmModule.forRootAsync({
+      useFactory: () => {
+        // Production (e.g. Vercel): use PostgreSQL via env vars so we don't rely
+        // on a local file/sqlite native binary that won't persist on serverless.
+        const dbHost = process.env.DB_HOST;
+        if (dbHost) {
+          return {
+            type: 'postgres',
+            host: dbHost,
+            port: parseInt(process.env.DB_PORT || '5432', 10),
+            username: process.env.DB_USERNAME,
+            password: process.env.DB_PASSWORD,
+            database: process.env.DB_NAME || 'buyorama',
+            ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
+            entities: [
+              Brand,
+              User,
+              SiteSettings,
+              Content,
+              BrandCoupon,
+              AllCoupon,
+              BrandFeed,
+              CardsFeed,
+              CreditCardCategory,
+              Bank,
+              Tag,
+            ],
+            synchronize: true,
+            logging: false,
+          };
+        }
+        // Local development: SQLite file (no external DB needed).
+        return {
+          type: 'sqlite',
+          database: 'healthelink_buyorama_dev.sqlite',
+          entities: [
+            Brand,
+            User,
+            SiteSettings,
+            Content,
+            BrandCoupon,
+            AllCoupon,
+            BrandFeed,
+            CardsFeed,
+            CreditCardCategory,
+            Bank,
+            Tag,
+          ],
+          synchronize: true,
+          logging: false,
+        };
+      },
     }),
     AuthModule,
     BrandsModule,
