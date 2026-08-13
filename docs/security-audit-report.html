@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Buyorama Admin Backoffice — Security Audit Report</title>
+<style>
+  :root { --bg:#0f172a; --panel:#1e293b; --panel-2:#273449; --text:#e2e8f0; --muted:#94a3b8; --border:#334155; --crit:#dc2626; --high:#f59e0b; --med:#3b82f6; --low:#10b981; --accent:#7c3aed; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; line-height:1.6; }
+  .wrap { max-width:1100px; margin:0 auto; padding:32px 24px 80px; }
+  header.hero { background:linear-gradient(135deg,#7c3aed 0%,#4c1d95 100%); border-radius:18px; padding:34px 30px; margin-bottom:28px; box-shadow:0 20px 45px -20px rgba(124,58,237,.5); }
+  header.hero h1 { margin:0 0 6px; font-size:30px; }
+  header.hero p { margin:0; color:rgba(255,255,255,.8); }
+  .meta { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px; margin-bottom:28px; }
+  .meta .card { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:16px 18px; }
+  .meta .card .k { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.5px; }
+  .meta .card .v { font-weight:700; margin-top:4px; }
+  .summary { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:12px; margin-bottom:30px; }
+  .summary .sev { border-radius:12px; padding:16px; text-align:center; background:var(--panel); border:1px solid var(--border); border-top:4px solid var(--sc); }
+  .summary .sev .n { font-size:30px; font-weight:800; color:var(--sc); }
+  .summary .sev .l { font-size:12px; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); }
+  h2.section { margin:44px 0 18px; font-size:22px; border-bottom:2px solid var(--border); padding-bottom:8px; }
+  .context .card { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:18px 20px; margin-bottom:14px; }
+  .finding { background:var(--panel); border:1px solid var(--border); border-left:6px solid var(--sc); border-radius:12px; padding:20px 22px; margin-bottom:20px; }
+  .finding h3 { margin:0 0 4px; font-size:18px; }
+  .finding .id { font-size:13px; color:var(--muted); }
+  .tag { display:inline-block; font-size:12px; font-weight:800; padding:3px 10px; border-radius:999px; letter-spacing:.4px; color:#fff; }
+  .tag.crit { background:var(--crit); }
+  .tag.high { background:var(--high); color:#1e293b; }
+  .tag.med { background:var(--med); }
+  .tag.low { background:var(--low); color:#04261c; }
+  .row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:12px; }
+  .fhead { font-weight:800; color:var(--accent); margin-top:12px; font-size:13px; text-transform:uppercase; letter-spacing:.4px; }
+  pre.code { background:#0b1120; border:1px solid var(--border); border-radius:8px; padding:12px 14px; font-size:12.5px; overflow-x:auto; line-height:1.5; font-family:"SFMono-Regular",Menlo,Consolas,monospace; }
+  code.inline { background:#0b1120; padding:2px 6px; border-radius:5px; font-size:12.5px; border:1px solid var(--border); }
+  ul,ol { margin:6px 0 6px 20px; }
+  li { margin:4px 0; }
+  table { width:100%; border-collapse:collapse; margin:10px 0; font-size:14px; }
+  th,td { border:1px solid var(--border); padding:8px 10px; text-align:left; }
+  th { background:var(--panel-2); }
+  footer { margin-top:50px; text-align:center; color:var(--muted); font-size:13px; }
+  a { color:var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <h1>🔐 Security Audit Report</h1>
+  <p>Buyorama Admin Backoffice &amp; Backend API — Senior Security Tester Review</p>
+</header>
+
+<div class="meta">
+  <div class="card"><div class="k">Target (Admin UI)</div><div class="v">http://localhost:3000/admin-backoffice</div></div>
+  <div class="card"><div class="k">Target (Backend API)</div><div class="v">http://localhost:3011 (NestJS)</div></div>
+  <div class="card"><div class="k">Test Account Provided</div><div class="v">editor@buyorama.com</div></div>
+  <div class="card"><div class="k">Report Type</div><div class="v">Architecture / Static Security Review</div></div>
+</div>
+
+<div class="summary">
+  <div class="sev" style="--sc:#dc2626"><div class="n">1</div><div class="l">Critical</div></div>
+  <div class="sev" style="--sc:#f59e0b"><div class="n">4</div><div class="l">High</div></div>
+  <div class="sev" style="--sc:#3b82f6"><div class="n">3</div><div class="l">Medium</div></div>
+  <div class="sev" style="--sc:#10b981"><div class="n">3</div><div class="l">Low</div></div>
+</div>
+
+<h2 class="section">Executive Summary</h2>
+<div class="context">
+  <div class="card">
+    <p>The application is composed of a <strong>Next.js frontend</strong> (admin SPA at <code class="inline">/admin-backoffice</code>) and a <strong>standalone NestJS/TypeORM backend</strong> (<code class="inline">buyorama_backoffice</code>) exposing CRUD endpoints under <code class="inline">/api/...</code>. The frontend and backend sit on separate ports and communicate over plain HTTP on localhost.</p>
+    <p>The most severe architectural defect is that <strong>the authentication token is purely a client-side UI gate and is never verified or enforced by the backend</strong>. Every <code class="inline">/api</code> endpoint — including create, update, delete, user management, and site settings — is reachable <strong>without authentication, authorization, or CSRF protection</strong>. Effectively the API is wide open to anyone who can reach it.</p>
+    <p>Notable positive: SQL access is performed through TypeORM's parameterized QueryBuilder/Repository APIs; no raw-SQL string-concatenation or SQL-injection sink was found. The ISR revalidation route is correctly protected by a secret.</p>
+    <p>Findings are listed by severity with description, impact, reproduction steps, recommended fixes, and code location. <strong>No code changes were made</strong>, preserving existing functionality and APIs.</p>
+  </div>
+</div>
+
+<h2 class="section">Scope &amp; Methodology</h2>
+<div class="context">
+  <div class="card">
+    <p>Reviewed components:</p>
+    <ul>
+      <li>Authentication &amp; authorization (JWT issuance, guards, role handling)</li>
+      <li>User management APIs (<code class="inline">/api/users/*</code>)</li>
+      <li>Content / brand / coupon / card / settings CRUD APIs</li>
+      <li>Data validation / DTOs / mass assignment</li>
+      <li>SQL build paths (TypeORM QueryBuilder &amp; Repository) for injection</li>
+      <li>Frontend XSS sinks (RichTextEditor, <code class="inline">dangerouslySetInnerHTML</code>)</li>
+      <li>File-upload handling, session/token storage, CORS, rate limiting, secret handling</li>
+    </ul>
+    <p>Methodology: static analysis of application source, authentication-flow tracing, and endpoint-by-endpoint authorization / validation control review. Prioritization follows the OWASP Top 10 and OWASP API Security Top 10.</p>
+  </div>
+</div>
+
+<!-- ============ CRITICAL ============ -->
+<h2 class="section">Critical Findings</h2>
+
+<div class="finding" style="--sc:#dc2626">
+  <div class="row"><span class="tag crit">CRITICAL</span><span class="id">Finding C-01 · CWE-287 / CWE-639</span></div>
+  <h3>Broken Authentication &amp; Broken Object Level Authorization — entire API is unprotected</h3>
+  <div class="fhead">Description</div>
+  <p>No route guard, JWT strategy, role guard, or <code class="inline">useGlobalGuards</code> is attached to any controller or endpoint. The JWT signed at login is returned to the browser, stored in <code class="inline">localStorage</code>, and used <em>only</em> client-side to decide whether to render admin pages. Subsequent API calls do <strong>not</strong> send the token, and the server never validates it. All <code class="inline">/api</code> routes (list/create/update/delete/status, user creation, settings update) are anonymous.</p>
+  <div class="fhead">Impact</div>
+  <p><strong>Complete compromise.</strong> An unauthenticated attacker can enumerate, create, modify, and delete all brands, coupons, cards, content, feeds, user accounts, and site settings. They can create admin/editor accounts, list all user records, reset passwords, and deface or poison the entire public catalog (affiliate footprint, SEO, pricing). Because the API is reachable independently of the SPA login page, the login screen provides no real protection.</p>
+  <div class="fhead">Reproduction Steps</div>
+  <ol>
+    <li>Do not authenticate at all.</li>
+    <li>Send <code class="inline">POST /api/users/create</code> with any name/email/password → 201 Created, no auth required.</li>
+    <li>Send <code class="inline">POST /api/users/list</code> with no token → returns all user records.</li>
+    <li>Send <code class="inline">POST /api/settings/update</code> → rewrite public site settings.</li>
+    <li>Send <code class="inline">POST /api/coupons/delete</code>, <code class="inline">/api/brands/update</code>, etc. → mutate data without authenticating.</li>
+  </ol>
+  <div class="fhead">Code Location</div>
+  <pre class="code">buyorama_backoffice/src/main.ts                    (app.enableCors(); — no guards registered)
+buyorama_backoffice/src/users/auth.service.ts     (token generation; no validation/guard)
+buyorama_backoffice/src/users/users.controller.ts  (no @UseGuards)
+buyorama_backoffice/src/brands/brands.controller.ts
+buyorama_backoffice/src/content/content.controller.ts
+buyorama_backoffice/src/settings/settings.controller.ts
+buyorama_backoffice/src/coupons/coupons.controller.ts
+buyorama_backoffice/src/cards-feeds/cards-feed.controller.ts
+buyorama_backoffice/src/brand-feeds/brand-feeds.controller.ts
+buyorama_backoffice/src/brand-coupons/brand-coupons.controller.ts
+buyorama_backoffice/src/banks/banks.controller.ts
+buyorama_backoffice/src/tags/tags.controller.ts
+buyorama/src/lib/admin/http.ts                   (no Authorization header sent)</pre>
+  <div class="fhead">Recommended Fix</div>
+  <ul>
+    <li>Register a <strong>global JWT auth guard</strong> and explicitly mark only public routes (e.g. <code class="inline">POST /api/users/login</code>).</li>
+    <li>Make the frontend send the token on <strong>every</strong> API request via <code class="inline">Authorization: Bearer &lt;jwt&gt;</code> or an httpOnly same-site cookie.</li>
+    <li>Add an <strong>RBAC</strong> model (roles/permissions) and enforce it server-side; only admins manage users, editors restricted to content.</li>
+    <li>Validate server-side that the authenticated identity/ownership matches the resource <code class="inline">id</code> being modified (closes IDOR).</li>
+  </ul>
+</div>
+
+<!-- ============ HIGH ============ -->
+<h2 class="section">High Findings</h2>
+
+<div class="finding" style="--sc:#f59e0b">
+  <div class="row"><span class="tag high">HIGH</span><span class="id">Finding H-01 · CWE-798</span></div>
+  <h3>Hardcoded JWT Secret (predictable signing key → token forgery)</h3>
+  <div class="fhead">Description</div>
+  <p>The JWT module uses a default secret when none is configured:</p>
+  <pre class="code">JwtModule.register({
+  secret: process.env.JWT_SECRET || 'your-secret-key',
+  signOptions: { expiresIn: '7d' },
+})</pre>
+  <p>Tokens also expire after 7 days with no refresh/rotation logic.</p>
+  <div class="fhead">Impact</div>
+  <p>If <code class="inline">JWT_SECRET</code> is absent, an attacker can forge valid JWTs for <em>any</em> user (including admins) using the well-known string <code class="inline">your-secret-key</code>, enabling trivial session impersonation once server-side validation is added.</p>
+  <div class="fhead">Reproduction Steps</div>
+  <ol>
+    <li>Observe the fallback in <code class="inline">users.module.ts</code>.</li>
+    <li>Sign a forged HS256 token with that secret and any <code class="inline">sub</code>/<code class="inline">email</code>.</li>
+    <li>Present the forged token to impersonate the target user.</li>
+  </ol>
+  <div class="fhead">Code Location</div>
+  <pre class="code">buyorama_backoffice/src/users/users.module.ts</pre>
+  <div class="fhead">Recommended Fix</div>
+  <ul>
+    <li>Require a strong, randomly generated <code class="inline">JWT_SECRET</code> from env and <strong>fail fast</strong> (throw) if missing rather than fall back to a default.</li>
+    <li>Prefer asymmetric signing (RS256) or short-lived access tokens + refresh rotation; keep secrets only in the environment.</li>
+  </ul>
+</div>
+
+<div class="finding" style="--sc:#f59e0b">
+  <div class="row"><span class="tag high">HIGH</span><span class="id">Finding H-02 · CWE-79</span></div>
+  <h3>Stored Cross-Site Scripting (XSS) via Rich Text Editor &amp; Unvalidated HTML</h3>
+  <div class="fhead">Description</div>
+  <p>Rich text content is captured as raw inner HTML (<code class="inline">document.execCommand</code> + <code class="inline">el.innerHTML</code>) and re-injected with <code class="inline">dangerouslySetInnerHTML</code> in the admin editor. There is <strong>no sanitization</strong> anywhere in the pipeline (client or server), and the API endpoints accept arbitrary HTML strings for card/feed descriptions.</p>
+  <div class="fhead">Impact</div>
+  <p>An attacker (or, due to C-01, any unauthorized party) can store a payload such as <code class="inline">&lt;img src=x onerror=alert(document.cookie)&gt;</code> or a <code class="inline">javascript:</code> link. It executes against any admin who opens the record for editing (rendered via <code class="inline">dangerouslySetInnerHTML</code>) and against any public surface rendering the field without escaping — enabling admin session hijack, data exfiltration, and site defacement.</p>
+  <div class="fhead">Reproduction Steps</div>
+  <ol>
+    <li><code class="inline">POST /api/cards-feed/create</code> (or brand-feed create) with <code class="inline">description</code> = <code class="inline">&lt;img src=x onerror=alert(document.domain)&gt;</code>.</li>
+    <li>Open the Cards page and click <strong>Edit</strong> on that card.</li>
+    <li>The editor's <code class="inline">dangerouslySetInnerHTML</code> executes the handler in the admin session.</li>
+  </ol>
+  <div class="fhead">Code Location</div>
+  <pre class="code">buyorama/src/app/admin-backoffice/cards/_components/RichTextEditor.tsx
+buyorama/src/app/admin-backoffice/brand-feeds/[brandSlug]/_components/RichTextEditor.tsx
+buyorama_backoffice/src/cards-feeds/cards-feed.service.ts   (stores raw HTML)
+buyorama_backoffice/src/brand-feeds/brand-feeds.service.ts   (stores raw HTML)</pre>
+  <div class="fhead">Recommended Fix</div>
+  <ul>
+    <li>Sanitize rich-text HTML server-side with an allow-list library (e.g. DOMPurify), stripping <code class="inline">javascript:</code> URLs, <code class="inline">on*</code> handlers, and tags such as <code class="inline">script</code>, <code class="inline">iframe</code>, <code class="inline">object</code>, <code class="inline">embed</code>, <code class="inline">form</code>, and style/event attributes.</li>
+    <li>Enforce a strict schema for link protocols (<code class="inline">http:</code>/<code class="inline">https:</code> only).</li>
+    <li>Prefer a schema-driven rich-text framework (TipTap/Slate) rather than raw <code class="inline">contentEditable</code> + <code class="inline">innerHTML</code>.</li>
+    <li>Use <code class="inline">dangerouslySetInnerHTML</code> only after sanitization and never trust stored values blindly.</li>
+  </ul>
+</div>
+
+<div class="finding" style="--sc:#f59e0b">
+  <div class="row"><span class="tag high">HIGH</span><span class="id">Finding H-03 · CWE-269</span></div>
+  <h3>Privilege Escalation / Mass Assignment on User Management</h3>
+  <div class="fhead">Description</div>
+  <p><code class="inline">POST /api/users/create</code>, <code class="inline">POST /api/users/update</code>, and <code class="inline">POST /api/users/update-status</code> have <strong>no guard</strong>, so any caller may create arbitrary accounts, reset any user's password, and deactivate any user. DTOs have no role/scope constraints and the service derives no authorization from the session. If a role field is added later, a caller could elevate privileges by passing it in the body.</p>
+  <div class="fhead">Impact</div>
+  <p>Total account takeover of all admin/editor accounts. An attacker can create a backdoor account, change any user's password to lock out staff, and pivot to full control of the platform's data.</p>
+  <div class="fhead">Reproduction Steps</div>
+  <pre class="code">curl -X POST http://localhost:3011/api/users/update -H "Content-Type: application/json" \
+  -d '{"id":"&lt;admin-uuid&gt;","password":"Mine1234"}'   # attacker now controls the admin account</pre>
+  <div class="fhead">Code Location</div>
+  <pre class="code">buyorama_backoffice/src/users/users.controller.ts
+buyorama_backoffice/src/users/users.service.ts   (addUser, updateUser, updateStatus)
+buyorama_backoffice/src/users/dto/create-user.dto.ts</pre>
+  <div class="fhead">Recommended Fix</div>
+  <ul>
+    <li>Restrict user-management endpoints to authenticated users with an <strong>Admin</strong> role via a guard.</li>
+    <li>Never allow a caller to self-elevate; derive role from the authenticated session server-side, not the request body.</li>
+    <li>Use explicit allow-list DTOs with whitelisting and server-side authorization checks.</li>
+  </ul>
+</div>
+
+<div class="finding" style="--sc:#f59e0b">
+  <div class="row"><span class="tag high">HIGH</span><span class="id">Finding H-04 · CWE-346</span></div>
+  <h3>Cross-Origin Resource Sharing (CORS) fully open</h3>
+  <div class="fhead">Description</div>
+  <p><code class="inline">app.enableCors()</code> is called with <strong>no configuration</strong>, which by default reflects any origin and permits any method. Combined with the absence of CSRF protection and lack of authentication, a malicious website can issue browser-based requests to the admin API on a victim's behalf.</p>
+  <div class="fhead">Impact</div>
+  <p>Cross-origin data theft and cross-site request forgery become trivial. A victim visiting a malicious page can have their browser call the admin API to read or mutate data. Compounds the impact of C-01.</p>
+  <div class="fhead">Reproduction Steps</div>
+  <pre class="code">curl -i -X OPTIONS http://localhost:3011/api/brands/list \
+  -H "Origin: https://evil.example" -H "Access-Control-Request-Method: POST"
+# If the response echoes evil.example -> vulnerable</pre>
+  <div class="fhead">Code Location</div>
+  <pre class="code">buyorama_backoffice/src/main.ts   (app.enableCors();)</pre>
+  <div class="fhead">Recommended Fix</div>
+  <ul>
+    <li>Configure an explicit origin allow-list: <code class="inline">app.enableCors({ origin:['https://buyorama.example'], credentials:true, methods:[...] })</code>.</li>
+    <li>Add CSRF tokens (or require a custom header / SameSite cookies) for state-changing requests.</li>
+  </ul>
+</div>
+
+<!-- ============ MEDIUM ============ -->
+<h2 class="section">Medium Findings</h2>
+
+<div class="finding" style="--sc:#3b82f6">
+  <div class="row"><span class="tag med">MEDIUM</span><span class="id">Finding M-01 · CWE-312 / CWE-319</span></div>
+  <h3>Sensitive Data Exposure — JWT in localStorage &amp; plaintext HTTP</h3>
+  <div class="fhead">Description</div>
+  <p>The auth token and user object are persisted in <code class="inline">localStorage</code> (readable by any script in the origin, not server-invalidatable) and transmitted over plain HTTP on localhost.</p>
+  <div class="fhead">Impact</div>
+  <p>Any XSS (H-02) or malicious browser extension can read <code class="inline">localStorage</code> and steal the token. Plain HTTP permits on-path interception. Token theft = session hijack.</p>
+  <div class="fhead">Reproduction Steps</div>
+  <ol>
+    <li>Trigger stored XSS (H-02).</li>
+    <li>Read <code class="inline">localStorage.getItem('authToken')</code> and exfiltrate it.</li>
+  </ol>
+  <div class="fhead">Code Location</div>
+  <pre class="code">buyorama/src/app/admin-backoffice/page.tsx   (localStorage.setItem("authToken"...))
+buyorama/src/app/admin-backoffice/{dashboard,brands,content,coupons,cards,cardsSettings,brand-feeds}/page.tsx  (authToken reads)</pre>
+  <div class="fhead">Recommended Fix</div>
+  <ul>
+    <li>Store the session in an <strong>httpOnly, Secure, SameSite cookie</strong> instead of JS-accessible storage.</li>
+    <li>Enforce HTTPS + HSTS in production.</li>
+    <li>Implement server-side revocation / short TTL + refresh rotation.</li>
+  </ul>
+</div>
+
+<div class="finding" style="--sc:#3b82f6">
+  <div class="row"><span class="tag med">MEDIUM</span><span class="id">Finding M-02 · CWE-770 / CWE-20</span></div>
+  <h3>Inconsistent / Missing Input Validation &amp; Mass Assignment</h3>
+  <div class="fhead">Description</div>
+  <p>Only a subset of controllers (<code class="inline">coupons</code>, <code class="inline">brand-coupons</code>, <code class="inline">brand-feeds</code>, <code class="inline">cards-feed</code>) apply <code class="inline">@UsePipes(ValidationPipe)</code>. Others (users, brands, content, settings, banks, tags) rely on services that spread DTOs with <code class="inline">Object.assign</code> or <code class="inline">create({...})</code>. Query params <code class="inline">limit</code>/<code class="inline">offset</code>/<code class="inline">status</code> are parsed ad hoc and not validated or bounded.</p>
+  <div class="fhead">Impact</div>
+  <p>Unbounded <code class="inline">limit</code>/<code class="inline">offset</code> can be abused for resource exhaustion and over-enumeration; invalid types cause unexpected 500s (information disclosure); mass assignment lets callers set unintended entity fields (status, etc.), compromising data integrity.</p>
+  <div class="fhead">Reproduction Steps</div>
+  <pre class="code">curl -X POST http://localhost:3011/api/brands/list -H "Content-Type: application/json" \
+  -d '{"limit":999999999999,"offset":0}'        # resource exhaustion / huge payload
+curl -X POST http://localhost:3011/api/brand-feeds/update -H "Content-Type: application/json" \
+  -d '{"id":"x","title":"y","status":0}'         # Object.assign may set unintended fields</pre>
+  <div class="fhead">Code Location</div>
+  <pre class="code">buyorama_backoffice/src/coupons/coupons.service.ts            (Object.assign)
+buyorama_backoffice/src/brand-coupons/brand-coupons.service.ts (Object.assign)
+buyorama_backoffice/src/brand-feeds/brand-feeds.service.ts     (Object.assign)
+buyorama_backoffice/src/cards-feeds/cards-feed.service.ts      (Object.assign)
+buyorama_backoffice/src/users/users.controller.ts              (no ValidationPipe)
+buyorama_backoffice/src/brands/brands.controller.ts            (no ValidationPipe)
+buyorama_backoffice/src/content/content.controller.ts          (no DTO validation)</pre>
+  <div class="fhead">Recommended Fix</div>
+  <ul>
+    <li>Apply a <strong>global <code class="inline">ValidationPipe({ whitelist:true, transform:true })</code></strong> to strip unknown fields and block mass assignment.</li>
+    <li>Add consistent DTOs with bounds (<code class="inline">@IsInt</code>/<code class="inline">@Min</code>/<code class="inline">@Max</code>) for <code class="inline">limit</code>/<code class="inline">offset</code>/<code class="inline">status</code>.</li>
+    <li>Replace <code class="inline">Object.assign</code> with explicit field-by-field assignment.</li>
+  </ul>
+</div>
+
+<div class="finding" style="--sc:#3b82f6">
+  <div class="row"><span class="tag med">MEDIUM</span><span class="id">Finding M-03 · CWE-307 / CWE-770</span></div>
+  <h3>No Rate Limiting / Brute-Force Protection on Login &amp; CRUD</h3>
+  <div class="fhead">Description</div>
+  <p>No <code class="inline">@nestjs/throttler</code>, no IP-based limiting, no account lockout, and no anti-automation on the login or any CRUD endpoint.</p>
+  <div class="fhead">Impact</div>
+  <p>Unlimited credential-stuffing / brute-force against the login form and unbounded automation of destructive CRUD (mass delete/spam), plus resource exhaustion at scale.</p>
+  <div class="fhead">Reproduction Steps</div>
+  <ol>
+    <li>Loop thousands of <code class="inline">POST /api/users/login</code> attempts with varying passwords — no lockout or throttling is observed.</li>
+    <li>Loop destructive <code class="inline">delete</code>/<code class="inline">update-status</code> calls at high volume — no rate limiting.</li>
+  </ol>
+  <div class="fhead">Code Location</div>
+  <pre class="code">buyorama_backoffice/src/users/users.controller.ts   (login)
+buyorama_backoffice/src/users/users.service.ts      (login)
+buyorama_backoffice/src/app.module.ts                (no ThrottlerModule)</pre>
+  <div class="fhead">Recommended Fix</div>
+  <ul>
+    <li>Enable rate limiting (e.g. <code class="inline">@nestjs/throttler</code>) on login and all write endpoints.</li>
+    <li>Add account lockout / exponential backoff and optional CAPTCHA on login.</li>
+  </ul>
+</div>
+
+<!-- ============ LOW ============ -->
+<h2 class="section">Low Findings &amp; Defensive Notes</h2>
+
+<div class="finding" style="--sc:#10b981">
+  <div class="row"><span class="tag low">LOW</span><span class="id">Finding L-01 · CWE-693</span></div>
+  <h3>Missing Security Headers / Error-Message Leakage</h3>
+  <div class="fhead">Description</div>
+  <p>NestJS app does not apply <code class="inline">helmet</code>, HSTS, X-Content-Type-Options, CSP, Referrer-Policy, or X-Frame-Options. Several services return verbose internal messages (e.g. <code class="inline">'Error fetching content: ' + error.message</code>).</p>
+  <div class="fhead">Impact</div>
+  <p>Clickjacking, MIME-sniffing, reduced XSS protection; verbose errors may leak stack/DB details to clients.</p>
+  <div class="fhead">Code Location</div>
+  <pre class="code">buyorama_backoffice/src/main.ts
+buyorama_backoffice/src/content/content.service.ts   (returns error.message to client)</pre>
+  <div class="fhead">Recommended Fix</div>
+  <ul>
+    <li>Register <code class="inline">helmet()</code> and a strict CSP; add a global exception filter that logs details server-side and returns generic messages.</li>
+  </ul>
+</div>
+
+<div class="finding" style="--sc:#10b981">
+  <div class="row"><span class="tag low">LOW</span><span class="id">Finding L-02 · CWE-434</span></div>
+  <h3>File Upload Validation Is Client-Side Only</h3>
+  <div class="fhead">Description</div>
+  <p>The admin <code class="inline">ImageUploadField</code> enforces size (≤1MB) and <code class="inline">image/*</code> MIME-type and encodes as base64 data-URL. There is no server-side file validation (magic bytes, dimensions, storage policy); base64 data-URLs are stored in DB columns.</p>
+  <div class="fhead">Impact</div>
+  <p>If rendered unescaped, increases the stored-XSS/DoS surface. Lower risk because data-URLs are embedded and displayed as images, but the server enforces no policy and DB columns could grow unbounded.</p>
+  <div class="fhead">Code Location</div>
+  <pre class="code">buyorama/src/components/admin/ImageUploadField.tsx   (client-side validation only)</pre>
+  <div class="fhead">Recommended Fix</div>
+  <ul>
+    <li>Move validation server-side (size, magic bytes, allowed extensions) and store files in a scoped object store instead of base64 text.</li>
+    <li>Serve uploads with no-sniff headers and never render via <code class="inline">dangerouslySetInnerHTML</code>.</li>
+  </ul>
+</div>
+
+<div class="finding" style="--sc:#10b981">
+  <div class="row"><span class="tag low">LOW</span><span class="id">Finding L-03 · CWE-798</span></div>
+  <h3>Secret Keys Committed / Defaults in Code</h3>
+  <div class="fhead">Description</div>
+  <p>The <code class="inline">JWT_SECRET</code> fallback <code class="inline">'your-secret-key'</code> lives in source, a developer convenience that becomes a hazardous default if it reaches production. Admin quickstart docs also reference token-storage keys and a base-URL default for the admin API.</p>
+  <div class="fhead">Impact</div>
+  <p>Reinforces H-01; if defaults ship to production, authentication can be completely subverted.</p>
+  <div class="fhead">Code Location</div>
+  <pre class="code">buyorama_backoffice/src/users/users.module.ts
+buyorama/src/lib/admin-api.ts   (ADMIN_API_BASE_URL default)</pre>
+  <div class="fhead">Recommended Fix</div>
+  <ul>
+    <li>Load all secrets and service URLs exclusively from the environment; fail fast on missing values; never commit defaults.</li>
+    <li>Rotate any secrets that have appeared in source / documentation history.</li>
+  </ul>
+</div>
+
+<h2 class="section">Positive Security Notes</h2>
+<div class="context">
+  <div class="card">
+    <ul>
+      <li><strong>Parameterized queries:</strong> All data access uses TypeORM Repository / parameterized QueryBuilder; no raw SQL string concatenation or SQL-injection sink was identified.</li>
+      <li><strong>ISR webhook protection:</strong> The Next.js <code class="inline">/api/revalidate</code> route validates a secret from environment and rejects unauthorized cache-busting.</li>
+      <li><strong>bcrypt:</strong> User passwords are hashed with bcrypt rather than stored in plaintext.</li>
+    </ul>
+  </div>
+</div>
+
+<h2 class="section">Remediation Priority</h2>
+<div class="context">
+  <div class="card">
+    <table>
+      <thead><tr><th>Priority</th><th>Action</th><th>Findings</th></tr></thead>
+      <tbody>
+        <tr><td>1 (Immediate)</td><td>Enforce server-side authentication + authorization (global JWT guard + RBAC); stop treating login as a UI-only gate.</td><td>C-01, H-03</td></tr>
+        <tr><td>2 (High)</td><td>Sanitize rich-text HTML; harden JWT secret handling; lock down CORS.</td><td>H-01, H-02, H-04</td></tr>
+        <tr><td>3 (Medium)</td><td>Move sessions to httpOnly cookies; global ValidationPipe + bounded DTOs; add rate limiting.</td><td>M-01, M-02, M-03</td></tr>
+        <tr><td>4 (Hardening)</td><td>Security headers, error-message hygiene, server-side file policy, secret cleanup.</td><td>L-01, L-02, L-03</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<footer>
+  <p>Buyorama Security Audit Report · Static / Architecture review · No system data was modified during this review.</p>
+</footer>
+
+</div>
+</body>
+</html>
