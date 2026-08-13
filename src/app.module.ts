@@ -47,34 +47,44 @@ import { Tag } from './entities/tag.entity';
     ]),
     TypeOrmModule.forRootAsync({
       useFactory: () => {
-        // Production (e.g. Vercel): use PostgreSQL via env vars so we don't rely
-        // on a local file/sqlite native binary that won't persist on serverless.
-        const dbHost = process.env.DB_HOST;
-        if (dbHost) {
-          return {
-            type: 'postgres',
-            host: dbHost,
+        // PostgreSQL is used only when explicitly opted in via DB_TYPE=postgres
+        // (e.g. on Vercel). Local development defaults to the SQLite file so it
+        // boots without an external database.
+        const usePostgres =
+          process.env.DB_TYPE === 'postgres' || !!process.env.DATABASE_URL;
+
+        if (usePostgres) {
+          // Prefer a single connection string when provided (e.g. Neon/Verification).
+          const connectionString = process.env.DATABASE_URL;
+          const base: Record<string, unknown> = connectionString
+            ? { url: connectionString }
+            : {
+                host: process.env.DB_HOST,
             port: parseInt(process.env.DB_PORT || '5432', 10),
             username: process.env.DB_USERNAME,
             password: process.env.DB_PASSWORD,
             database: process.env.DB_NAME || 'buyorama',
+              };
+          return {
+            type: 'postgres',
+            ...base,
             ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
-            entities: [
-              Brand,
-              User,
-              SiteSettings,
-              Content,
-              BrandCoupon,
-              AllCoupon,
-              BrandFeed,
-              CardsFeed,
-              CreditCardCategory,
-              Bank,
-              Tag,
-            ],
-            synchronize: true,
-            logging: false,
-          };
+          entities: [
+            Brand,
+            User,
+            SiteSettings,
+            Content,
+            BrandCoupon,
+            AllCoupon,
+            BrandFeed,
+            CardsFeed,
+            CreditCardCategory,
+            Bank,
+            Tag,
+          ],
+          synchronize: true,
+          logging: false,
+        };
         }
         // Local development: SQLite file (no external DB needed).
         return {
