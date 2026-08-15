@@ -4,6 +4,9 @@
   "description": "Buyorama Backoffice API - NestJS backend for admin services",
   "author": "Buyorama Team",
   "license": "ISC",
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "build": "nest build",
     "start": "node dist/main.js",
