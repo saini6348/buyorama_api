@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createApp } from '../src/app.bootstrap';
 
-// Cache the Nest application across warm invocations.
+// Cache the Nest app across warm invocations for lower latency.
 let cachedApp: Awaited<ReturnType<typeof createApp>> | null = null;
 
 async function getApp() {
@@ -11,7 +11,9 @@ async function getApp() {
   return cachedApp;
 }
 
-// Vercel Node.js serverless function — routes every request through Nest.
+// Vercel Node.js serverless handler — routes every request through Nest
+// using the Express adapter. This is the required exported handler that
+// @vercel/node looks for (unlike src/main.ts which calls app.listen()).
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const app = await getApp();
