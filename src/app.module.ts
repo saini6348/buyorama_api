@@ -63,7 +63,8 @@ import { Tag } from './entities/tag.entity';
               database: process.env.DB_NAME || 'buyorama',
             };
 
-        const useSsl = process.env.DB_SSL === 'true';
+        // const useSsl = process.env.DB_SSL === 'true';
+        const useSsl = false;
 
         return {
           type: 'postgres',
@@ -73,8 +74,10 @@ import { Tag } from './entities/tag.entity';
           // takes precedence over the top-level `ssl` option and forces full
           // certificate verification, which fails against self-signed/managed
           // Postgres certs. `extra.ssl` is applied last and wins.
-          ssl: useSsl ? { rejectUnauthorized: false } : false,
-          extra: useSsl ? { ssl: { rejectUnauthorized: false } } : undefined,
+          
+          // ssl: useSsl ? { rejectUnauthorized: false } : false,
+          // extra: useSsl ? { ssl: { rejectUnauthorized: false } } : undefined,
+          ssl : false,
           entities: [
               Brand,
               User,
