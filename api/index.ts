@@ -1,5 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { createApp } from '../src/app.bootstrap';
+// Import the pre-built output (produced by `nest build`), not the raw src/*.ts.
+// Vercel's Node builder transpiles api/*.ts with esbuild, which does not
+// reproduce Nest's `emitDecoratorMetadata` output, breaking constructor
+// injection (e.g. Reflector in JwtAuthGuard) if the Nest module graph is
+// imported from source here.
+import { createApp } from '../dist/app.bootstrap';
 
 // Cache the Nest app across warm invocations for lower latency.
 let cachedApp: Awaited<ReturnType<typeof createApp>> | null = null;
