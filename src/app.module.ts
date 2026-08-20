@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import * as dotenv from 'dotenv';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
@@ -31,6 +32,8 @@ import { CreditCardCategory } from './entities/credit-card-category.entity';
 import { Bank } from './entities/bank.entity';
 import { Tag } from './entities/tag.entity';
 
+dotenv.config();
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -50,6 +53,17 @@ import { Tag } from './entities/tag.entity';
         // AWS RDS / standalone PostgreSQL only.
         // Uses discrete DB_* vars (DB_HOST, DB_PORT, DB_NAME, DB_USERNAME, DB_PASSWORD)
         // from .env, unless a connection string (DATABASE_URL) is provided.
+        console.log('[DB] Loaded environment variables before connection:');
+        console.log('[DB] DB_TYPE      =', process.env.DB_TYPE);
+        console.log('[DB] DB_HOST      =', process.env.DB_HOST);
+        console.log('[DB] DB_PORT      =', process.env.DB_PORT);
+        console.log('[DB] DB_NAME      =', process.env.DB_NAME);
+        console.log('[DB] DB_USERNAME  =', process.env.DB_USERNAME);
+        console.log('[DB] DB_PASSWORD  =', process.env.DB_PASSWORD ? '[set]' : '[not set]');
+        console.log('[DB] DB_SSL       =', process.env.DB_SSL);
+        console.log('[DB] DATABASE_URL =', process.env.DATABASE_URL || '[not set]');
+        console.log('[DB] POSTGRES_URL_NON_POOLING =', process.env.POSTGRES_URL_NON_POOLING || '[not set]');
+
         const connectionString =
           process.env.DATABASE_URL || process.env.POSTGRES_URL_NON_POOLING;
 
@@ -63,8 +77,7 @@ import { Tag } from './entities/tag.entity';
               database: process.env.DB_NAME || 'buyorama',
             };
 
-        // const useSsl = process.env.DB_SSL === 'true';
-        const useSsl = false;
+        const useSsl = process.env.DB_SSL === 'true' || !!connectionString;
 
         return {
           type: 'postgres',
@@ -74,10 +87,8 @@ import { Tag } from './entities/tag.entity';
           // takes precedence over the top-level `ssl` option and forces full
           // certificate verification, which fails against self-signed/managed
           // Postgres certs. `extra.ssl` is applied last and wins.
-          
-          // ssl: useSsl ? { rejectUnauthorized: false } : false,
-          // extra: useSsl ? { ssl: { rejectUnauthorized: false } } : undefined,
-          ssl : false,
+          ssl: useSsl ? { rejectUnauthorized: false } : false,
+          extra: useSsl ? { ssl: { rejectUnauthorized: false } } : undefined,
           entities: [
               Brand,
               User,
