@@ -52,6 +52,6 @@ export async function createApp(): Promise<INestApplication> {
   // Global exception filter (L-01: no error details leaked to client)
   app.useGlobalFilters(new AllExceptionsFilter());
 
-  app.init();
+  await app.init();
   return app;
 }
