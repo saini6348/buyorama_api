@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
-import * as dotenv from 'dotenv';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
@@ -32,14 +31,9 @@ import { CreditCardCategory } from './entities/credit-card-category.entity';
 import { Bank } from './entities/bank.entity';
 import { Tag } from './entities/tag.entity';
 
-dotenv.config();
-
 @Module({
   imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-      envFilePath: '.env',
-    }),
+    ConfigModule.forRoot({ isGlobal: true }),
     CommonModule,
     // Rate limiting (M-03)
     ThrottlerModule.forRoot([
@@ -49,61 +43,45 @@ dotenv.config();
       },
     ]),
     TypeOrmModule.forRootAsync({
-      useFactory: () => {
-        // AWS RDS / standalone PostgreSQL only.
-        // Uses discrete DB_* vars (DB_HOST, DB_PORT, DB_NAME, DB_USERNAME, DB_PASSWORD)
-        // from .env, unless a connection string (DATABASE_URL) is provided.
-        console.log('[DB] Loaded environment variables before connection:');
-        console.log('[DB] DB_TYPE      =', process.env.DB_TYPE);
-        console.log('[DB] DB_HOST      =', process.env.DB_HOST);
-        console.log('[DB] DB_PORT      =', process.env.DB_PORT);
-        console.log('[DB] DB_NAME      =', process.env.DB_NAME);
-        console.log('[DB] DB_USERNAME  =', process.env.DB_USERNAME);
-        console.log('[DB] DB_PASSWORD  =', process.env.DB_PASSWORD ? '[set]' : '[not set]');
-        console.log('[DB] DB_SSL       =', process.env.DB_SSL);
-        console.log('[DB] DATABASE_URL =', process.env.DATABASE_URL || '[not set]');
-        console.log('[DB] POSTGRES_URL_NON_POOLING =', process.env.POSTGRES_URL_NON_POOLING || '[not set]');
-
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => {
         const connectionString =
-          process.env.DATABASE_URL || process.env.POSTGRES_URL_NON_POOLING;
+          config.get<string>('DATABASE_URL') ||
+          config.get<string>('POSTGRES_URL_NON_POOLING');
 
         const base: Record<string, unknown> = connectionString
           ? { url: connectionString }
           : {
-              host: process.env.DB_HOST,
-              port: parseInt(process.env.DB_PORT || '5432', 10),
-              username: process.env.DB_USERNAME,
-              password: process.env.DB_PASSWORD,
-              database: process.env.DB_NAME || 'buyorama',
+              host: config.get<string>('DB_HOST', 'localhost'),
+              port: config.get<number>('DB_PORT', 5432),
+              username: config.get<string>('DB_USERNAME', ''),
+              password: config.get<string>('DB_PASSWORD', ''),
+              database: config.get<string>('DB_NAME', ''),
             };
 
-        const useSsl = process.env.DB_SSL === 'true' || !!connectionString;
+        const useSsl = config.get<string>('DB_SSL') === 'true' || !!connectionString;
 
         return {
           type: 'postgres',
           ...base,
-          // Set via `extra` too: when a connection string carries its own
-          // sslmode (e.g. Supabase's `?sslmode=require`), pg's own parsing
-          // takes precedence over the top-level `ssl` option and forces full
-          // certificate verification, which fails against self-signed/managed
-          // Postgres certs. `extra.ssl` is applied last and wins.
+          autoLoadEntities: true,
+          synchronize: true,
+          logging: false,
           ssl: useSsl ? { rejectUnauthorized: false } : false,
           extra: useSsl ? { ssl: { rejectUnauthorized: false } } : undefined,
           entities: [
-              Brand,
-              User,
-              SiteSettings,
-              Content,
-              BrandCoupon,
-              AllCoupon,
-              BrandFeed,
-              CardsFeed,
-              CreditCardCategory,
-              Bank,
-              Tag,
-          ],
-          synchronize: true,
-          logging: false,
+            Brand,
+            User,
+            SiteSettings,
+            Content,
+            BrandCoupon,
+            AllCoupon,
+            BrandFeed,
+            CardsFeed,
+            CreditCardCategory,
+            Bank,
+            Tag,
+          ]
         };
       },
     }),
