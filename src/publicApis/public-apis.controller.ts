@@ -1,7 +1,8 @@
-import { Controller, Get, Param, Query, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, NotFoundException } from '@nestjs/common';
 import { PublicApisService } from './public-apis.service';
 import { Public } from '../auth/public.decorator';
 import { ListQueryDto } from './dto/list-query.dto';
+import { PublicListCardsFeedDto } from './dto/list-cards-feed.dto';
 
 /**
  * Public read-only APIs for the unauthenticated frontend site.
@@ -114,4 +115,18 @@ export class PublicApisController {
     const data = await this.publicApisService.getCouponById(id);
     return { data, message: 'Coupon retrieved successfully' };
   }
+
+  // ---------- Cards Feeds (public) ----------
+
+  /**
+   * List active credit-card feeds for the public site.
+   * Body: { page, limit, tags[], categories[], banks[] } — filters by NAME.
+   */
+  @Public()
+  @Post('cards-feed/list')
+  async listCardsFeeds(@Body() dto: PublicListCardsFeedDto) {
+    const { data, total } = await this.publicApisService.getActiveCardsFeeds(dto);
+    return { data, total, message: 'Card feeds retrieved successfully' };
+  }
 }
+

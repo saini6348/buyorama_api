@@ -5,6 +5,8 @@ import { Brand } from '../entities/brand.entity';
 import { BrandFeed } from '../entities/brand-feed.entity';
 import { AllCoupon } from '../entities/all-coupon.entity';
 import { BrandCoupon } from '../entities/brand-coupon.entity';
+import { CardsFeed } from '../cards-feeds/cards-feed.entity';
+import { PublicListCardsFeedDto } from './dto/list-cards-feed.dto';
 
 /** Public-facing shape for a store,based on the Brand entity (Option A). */
 export interface PublicStore {
@@ -32,6 +34,8 @@ export class PublicApisService {
     private couponsRepository: Repository<AllCoupon>,
     @InjectRepository(BrandCoupon)
     private brandCouponsRepository: Repository<BrandCoupon>,
+    @InjectRepository(CardsFeed)
+    private cardsFeedsRepository: Repository<CardsFeed>,
   ) {}
 
   private mapBrandToStore(brand: Brand): PublicStore {
@@ -254,6 +258,83 @@ export class PublicApisService {
       image: coupon.image,
       status: coupon.status,
       createdAt: coupon.createdAt,
+    };
+  }
+
+  // ---------- Cards feeds (public, POST /api/public/cards-feed/list) ----------
+
+  /**
+   * List active credit card feeds (status = 1), filtered by NAME arrays:
+   * { page, limit, tags[], categories[], banks[] }.
+   * Within each filter the selections OR together; across filters AND.
+   */
+  async getActiveCardsFeeds(dto: PublicListCardsFeedDto): Promise<{ data: unknown[]; total: number }> {
+    const {
+      page = 0,
+      limit = 20,
+      tags = [],
+      categories = [],
+      banks = [],
+    } = dto;
+
+    const query = this.cardsFeedsRepository
+      .createQueryBuilder('card')
+      .leftJoinAndSelect('card.bank', 'bank')
+      .leftJoinAndSelect('card.creditCardCategories', 'category')
+      .leftJoinAndSelect('card.tags', 'tag')
+      .where('card.status = :status', { status: 1 });
+
+    if (banks.length > 0) {
+      query.andWhere('LOWER(bank.name) IN (:...banks)', {
+        banks: banks.map((b) => b.toLowerCase()),
+      });
+    }
+
+    if (categories.length > 0) {
+      query.andWhere('LOWER(category.name) IN (:...categories)', {
+        categories: categories.map((c) => c.toLowerCase()),
+      });
+    }
+
+    if (tags.length > 0) {
+      query.andWhere('LOWER(tag.name) IN (:...tags)', {
+        tags: tags.map((t) => t.toLowerCase()),
+      });
+    }
+
+    const [feeds, total] = await query
+      .orderBy('card.createdAt', 'DESC')
+      .skip(page * limit)
+      .take(limit)
+      .getManyAndCount();
+
+    return { data: feeds.map((f) => this.mapCardsFeed(f)), total };
+  }
+
+  /** Map a CardsFeed entity into a public, frontend-friendly card shape. */
+  private mapCardsFeed(feed: CardsFeed) {
+    return {
+      id: feed.id,
+      title: feed.title,
+      description: feed.description,
+      image: feed.image,
+      link: this.resolveLink(feed.link),
+      bank: feed.bank
+        ? {
+            id: feed.bank.id,
+            name: feed.bank.name,
+          }
+        : null,
+      categories: (feed.creditCardCategories ?? []).map((c) => ({
+        id: c.id,
+        name: c.name,
+      })),
+      tags: (feed.tags ?? []).map((t) => ({
+        id: t.id,
+        name: t.name,
+      })),
+      status: feed.status,
+      createdAt: feed.createdAt,
     };
   }
 }

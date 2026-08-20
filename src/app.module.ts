@@ -45,6 +45,39 @@ import { Tag } from './entities/tag.entity';
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => {
+        const entities = [
+          Brand,
+          User,
+          SiteSettings,
+          Content,
+          BrandCoupon,
+          AllCoupon,
+          BrandFeed,
+          CardsFeed,
+          CreditCardCategory,
+          Bank,
+          Tag,
+        ];
+
+        if (config.get<string>('NODE_ENV') === 'local') {
+          // Local dev connects directly to the RDS instance over DB_* vars.
+          // RDS enforces SSL for connections from outside its VPC.
+          return {
+            type: 'postgres',
+            host: config.get<string>('DB_HOST', 'localhost'),
+            port: config.get<number>('DB_PORT', 5432),
+            username: config.get<string>('DB_USERNAME', ''),
+            password: config.get<string>('DB_PASSWORD', ''),
+            database: config.get<string>('DB_NAME', ''),
+            autoLoadEntities: true,
+            synchronize: true,
+            logging: false,
+            ssl: { rejectUnauthorized: false },
+            extra: { ssl: { rejectUnauthorized: false } },
+            entities,
+          };
+        }
+
         const rawConnectionString =
           config.get<string>('DATABASE_URL') ||
           config.get<string>('POSTGRES_URL_NON_POOLING');
@@ -88,19 +121,7 @@ import { Tag } from './entities/tag.entity';
           logging: false,
           ssl: useSsl ? { rejectUnauthorized: false } : false,
           extra: useSsl ? { ssl: { rejectUnauthorized: false } } : undefined,
-          entities: [
-            Brand,
-            User,
-            SiteSettings,
-            Content,
-            BrandCoupon,
-            AllCoupon,
-            BrandFeed,
-            CardsFeed,
-            CreditCardCategory,
-            Bank,
-            Tag,
-          ]
+          entities,
         };
       },
     }),
