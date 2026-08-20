@@ -38,3 +38,5 @@ coverage/
 # NestJS
 .env
 .env.test
+.vercel
+.env*
