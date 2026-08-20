@@ -47,85 +47,38 @@ import { Tag } from './entities/tag.entity';
     ]),
     TypeOrmModule.forRootAsync({
       useFactory: () => {
-        // PostgreSQL is used only when explicitly opted in via DB_TYPE=postgres
-        // (e.g. on Vercel). Local development defaults to the SQLite file so it
-        // boots without an external database.
-        const usePostgres =
-          process.env.DB_TYPE === 'postgres' || !!process.env.DATABASE_URL;
+        // AWS RDS / standalone PostgreSQL only.
+        // Uses discrete DB_* vars (DB_HOST, DB_PORT, DB_NAME, DB_USERNAME, DB_PASSWORD)
+        // from .env, unless a connection string (DATABASE_URL) is provided.
+        const connectionString =
+          process.env.DATABASE_URL || process.env.POSTGRES_URL_NON_POOLING;
 
-        if (usePostgres) {
-          // Prefer a single connection string when provided (e.g. Neon/Supabase).
-          // Uses the non-pooling (direct, port 5432) URL rather than the
-          // PgBouncer pooled one — TypeORM's synchronize:true runs DDL via
-          // prepared statements, which PgBouncer's transaction pooling mode
-          // does not support reliably.
-          const connectionString =
-            process.env.DATABASE_URL || process.env.POSTGRES_URL_NON_POOLING;
+        const base: Record<string, unknown> = connectionString
+          ? { url: connectionString }
+          : {
+              host: process.env.DB_HOST,
+              port: parseInt(process.env.DB_PORT || '5432', 10),
+              username: process.env.DB_USERNAME,
+              password: process.env.DB_PASSWORD,
+              database: process.env.DB_NAME || 'buyorama',
+            };
 
-          // --- OLD: local/standalone Postgres via discrete DB_* vars -------
-          // const base: Record<string, unknown> = connectionString
-          //   ? { url: connectionString }
-          //   : {
-          //       host: process.env.DB_HOST,
-          //       port: parseInt(process.env.DB_PORT || '5432', 10),
-          //       username: process.env.DB_USERNAME,
-          //       password: process.env.DB_PASSWORD,
-          //       database: process.env.DB_NAME || 'buyorama',
-          //     };
-          // -------------------------------------------------------------------
-
-          // --- NEW: Supabase Postgres via POSTGRES_URL_NON_POOLING ----------
-          if (!connectionString) {
-            throw new Error(
-              'DATABASE_URL or POSTGRES_URL_NON_POOLING must be set when DB_TYPE=postgres.',
-            );
-          }
-          // Strip sslmode from the URL: pg-connection-string now treats
-          // sslmode=require as an alias for verify-full (full CA chain
-          // validation), which rejects Supabase's cert and overrides the
-          // explicit `ssl` option below. TLS is still enforced via that
-          // `ssl` option, just without chain verification.
-          const url = new URL(connectionString);
-          url.searchParams.delete('sslmode');
-          const base: Record<string, unknown> = { url: url.toString() };
-          // -------------------------------------------------------------------
-          return {
-            type: 'postgres',
-            ...base,
-            ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
-          entities: [
-            Brand,
-            User,
-            SiteSettings,
-            Content,
-            BrandCoupon,
-            AllCoupon,
-            BrandFeed,
-            CardsFeed,
-            CreditCardCategory,
-            Bank,
-            Tag,
-          ],
-          synchronize: true,
-          logging: false,
-        };
-        }
-        // Local development: SQLite file (no external DB needed).
         return {
-          type: 'sqlite',
-          database: 'healthelink_buyorama_dev.sqlite',
+          type: 'postgres',
+          ...base,
+          ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
           entities: [
-            Brand,
-            User,
-            SiteSettings,
-            Content,
-            BrandCoupon,
-            AllCoupon,
-            BrandFeed,
-            CardsFeed,
-            CreditCardCategory,
-            Bank,
-            Tag,
+              Brand,
+              User,
+              SiteSettings,
+              Content,
+              BrandCoupon,
+              AllCoupon,
+              BrandFeed,
+              CardsFeed,
+              CreditCardCategory,
+              Bank,
+              Tag,
           ],
           synchronize: true,
           logging: false,
