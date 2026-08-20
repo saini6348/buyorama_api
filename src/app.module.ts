@@ -63,10 +63,18 @@ import { Tag } from './entities/tag.entity';
               database: process.env.DB_NAME || 'buyorama',
             };
 
+        const useSsl = process.env.DB_SSL === 'true';
+
         return {
           type: 'postgres',
           ...base,
-          ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
+          // Set via `extra` too: when a connection string carries its own
+          // sslmode (e.g. Supabase's `?sslmode=require`), pg's own parsing
+          // takes precedence over the top-level `ssl` option and forces full
+          // certificate verification, which fails against self-signed/managed
+          // Postgres certs. `extra.ssl` is applied last and wins.
+          ssl: useSsl ? { rejectUnauthorized: false } : false,
+          extra: useSsl ? { ssl: { rejectUnauthorized: false } } : undefined,
           entities: [
               Brand,
               User,
