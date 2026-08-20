@@ -45,9 +45,28 @@ import { Tag } from './entities/tag.entity';
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => {
-        const connectionString =
+        const rawConnectionString =
           config.get<string>('DATABASE_URL') ||
           config.get<string>('POSTGRES_URL_NON_POOLING');
+
+        // pg's own connection-string parser (pg-connection-string) re-derives an
+        // `ssl` value from the URL and that reparsed value is merged in LAST by
+        // node-postgres's ConnectionParameters, so it always overrides whatever
+        // `ssl`/`extra.ssl` we pass below — no matter what we set here, it loses.
+        // A `sslmode=require` query param (Supabase's default) makes pg set
+        // `ssl: {}`, i.e. TLS with full certificate verification, which fails
+        // against Supabase's managed cert with "self-signed certificate in
+        // certificate chain". Stripping the ssl-related params stops pg from
+        // deriving its own ssl config, so our explicit `ssl` option actually wins.
+        const connectionString = rawConnectionString
+          ? (() => {
+              const url = new URL(rawConnectionString);
+              ['sslmode', 'sslcert', 'sslkey', 'sslrootcert'].forEach((param) =>
+                url.searchParams.delete(param),
+              );
+              return url.toString();
+            })()
+          : undefined;
 
         const base: Record<string, unknown> = connectionString
           ? { url: connectionString }
