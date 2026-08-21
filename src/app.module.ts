@@ -19,6 +19,7 @@ import { CreditCardCategoriesModule } from './credit-card-categories/credit-card
 import { BanksModule } from './banks/banks.module';
 import { TagsModule } from './tags/tags.module';
 import { PublicApisModule } from './publicApis/public-apis.module';
+import { UploadsModule } from './uploads/uploads.module';
 import { Brand } from './entities/brand.entity';
 import { User } from './entities/user.entity';
 import { SiteSettings } from './entities/site-settings.entity';
@@ -138,6 +139,7 @@ import { Tag } from './entities/tag.entity';
     BanksModule,
     TagsModule,
     PublicApisModule,
+    UploadsModule,
   ],
   controllers: [AppController],
   providers: [
