@@ -1,5 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
+import * as path from 'path';
+import * as fs from 'fs';
 import helmet from 'helmet';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
@@ -17,6 +19,14 @@ export async function createApp(): Promise<INestApplication> {
 
   // Security headers (L-01: Helmet for security headers)
   app.use(helmet());
+
+  // Ensure the uploads directory exists and serve it statically so uploaded
+  // images are reachable at <API_BASE_URL>/uploads/<filename>.
+  const uploadsDir = path.join(process.cwd(), 'uploads');
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+  app.useStaticAssets(uploadsDir, { prefix: '/uploads/' });
 
   // CORS: restrict to configured origins only (H-04)
   const allowedOrigins = (
